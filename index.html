@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1140">
+<title>Master Kingdom</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@font-face{font-family:'Press Start 2P';src:url('PressStart2P-Regular.ttf') format('truetype');font-display:swap}
+:root{--bg:#1b1140;--panel:#2d1b69;--edge:#ffd23f;--ink:#fff;--teal:#2ec4b6;--blue:#2f6fed;--ok:#1fa971;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:'Press Start 2P','Courier New',monospace;font-size:12px;line-height:1.6}
+canvas{image-rendering:pixelated}
+#app{max-width:640px;margin:0 auto;min-height:100%;padding:12px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;
+background:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(2px 2px at 70% 15%,#fff,transparent),radial-gradient(2px 2px at 85% 60%,#ffd23f,transparent),radial-gradient(2px 2px at 40% 80%,#fff,transparent)}
+h1{font-size:22px;color:var(--edge);text-shadow:3px 3px #7b4dff;margin:8px 0 0}
+h2{font-size:14px;color:var(--edge);margin:4px 0}
+.sub{color:var(--teal);font-size:11px}
+.btn{font:inherit;color:#fff;background:var(--blue);border:4px solid var(--edge);box-shadow:0 5px #0a1f5c;padding:16px 14px;min-height:56px;width:100%;max-width:340px;cursor:pointer;font-size:12px}
+.btn:active{transform:translateY(4px);box-shadow:0 1px #0a1f5c}
+.btn.alt{background:var(--panel)}.btn.sm{width:auto;min-height:44px;padding:10px 12px}
+.box{background:var(--panel);border:4px solid var(--edge);padding:14px;width:100%}
+.grid{display:grid;gap:12px;width:100%;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.opt{font:inherit;min-height:96px;border:4px solid #fff;background:#3b2a85;font-size:34px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center}
+.opt.hint{animation:pulse .6s infinite alternate;border-color:var(--edge)}
+.opt.good{background:var(--ok)}
+.opt.bad{animation:shake .3s}
+.sw{width:56px;height:56px;border:3px solid #fff}
+.big{font-size:56px;min-height:90px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px}
+.dots span{display:inline-block;width:14px;height:14px;background:#4a3a8a;margin:0 3px}.dots .on{background:var(--edge)}
+.world{font:inherit;color:#fff;border:4px solid #fff;padding:12px;width:100%;max-width:340px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:11px}
+.lock{opacity:.55;filter:grayscale(.7)}
+.float{animation:fl 2s ease-in-out infinite alternate}
+@keyframes fl{to{transform:translateY(-8px)}}@keyframes pulse{to{transform:scale(1.07)}}@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+input{font:inherit;padding:12px;width:100%;max-width:260px;border:4px solid var(--edge);background:#fff;color:#000;text-align:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
+.sel{outline:4px solid var(--edge)}
+.btn:hover,.btn:focus-visible{filter:brightness(1.15);box-shadow:0 5px #0a1f5c,0 0 16px var(--edge)}
+.sk{position:fixed;width:6px;height:6px;background:var(--edge);pointer-events:none;z-index:99;animation:sk .6s forwards}
+@keyframes sk{to{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+#app::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(1px 1px at 10% 20%,#fff,transparent),radial-gradient(1px 1px at 60% 40%,#fff,transparent),radial-gradient(2px 2px at 90% 10%,#ffd23f,transparent),radial-gradient(1px 1px at 30% 75%,#7fd6f0,transparent);animation:drift 12s linear infinite alternate}
+@keyframes drift{from{transform:translateY(-20px)}to{transform:translateY(20px)}}
+@media (prefers-reduced-motion:reduce){*,#app::before{animation:none!important}}
+</style>
+</head><body><div id="app"></div>
+<noscript>Master Kingdom needs JavaScript to run.</noscript>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+const PAL={Y:'#ffd23f',S:'#ffd9b3',E:'#222',W:'#fff',B:'#f0f0f0',G:'#8d99ae',T:'#2ec4b6',D:'#3a2a5a',P:'#ff6b9d'};
+const WIZ=["....HH....","...HHHH...","..HHYHHH..",".HHHHHHHH.","HHHHHHHHHH","..SSSSSS..","..SESSES..","..SSSSSS..",".RRRRRRRR.","RRRRRRRRRR","RRRRRRRRRR","..RR..RR.."];
+const PROF=["....WW....","...WWWW...","..WWYWWW..",".WWWWWWWW.","WWWWWWWWWW","..SSSSSS..","..SESSES..","..BBBBBB..",".BBBBBBBB.","PPPPPPPPPP","PPPPPPPPPP","..PP..PP.."];
+const CASTLE=["T..T..TT..T..T","TT.TT.TT.TT.TT","GG.GG.GG.GG.GG","GGGGGGGGGGGGGG","GGYGGGDDGGGYGG","GGGGGGDDGGGGGG","GGGGGGDDGGGGGG","GGGGGGDDGGGGGG"];
+function spr(rows,over,sc){const c=document.createElement('canvas');c.width=rows[0].length*sc;c.height=rows.length*sc;const x=c.getContext('2d'),p={...PAL,...over};
+rows.forEach((r,j)=>[...r].forEach((ch,i)=>{if(p[ch]){x.fillStyle=p[ch];x.fillRect(i*sc,j*sc,sc,sc)}}));return c.outerHTML.replace('<canvas','<canvas class="float"')}
+function sprHTML(rows,over,sc){const c=document.createElement('canvas');c.width=rows[0].length*sc;c.height=rows.length*sc;const x=c.getContext('2d'),p={...PAL,...over};
+rows.forEach((r,j)=>[...r].forEach((ch,i)=>{if(p[ch]){x.fillStyle=p[ch];x.fillRect(i*sc,j*sc,sc,sc)}}));return c}
+function art(rows,over,sc,cls){const w=document.createElement('span');const c=sprHTML(rows,over,sc);if(cls)c.className=cls;w.appendChild(c);return w}
+const HATS=[['#7b4dff','#2ec4b6'],['#2f6fed','#ff6b9d'],['#1fa971','#ffd23f'],['#e8505b','#7b4dff'],['#ffd23f','#7b4dff'],['#0f4d2e','#9dff7a'],['#12407a','#7fd6f0'],['#1a1a4a','#2f6fed'],['#ff6b9d','#8a2be2'],['#e63946','#ffd23f']];
+const HNEED=[null,null,null,null,'colour','maze','lakemaze','mseq','jigsaw','final'];
+const LV=[['Little Wizards','2-3'],['Young Wizards','4-6'],['Master Wizards','7-9']];
+const KEY='mk_save_v1';
+let S=load();
+function def(){return{name:'',hat:0,lvl:1,done:{},stars:0,crystal:false,mute:false,seenIntro:false,items:[],fc:false,fi:false,vc:false,vi:false,lc:false,li:false,mc:false,mi:false,rc:false,ri:false,op:false,nar:true,mv:60,sv:80,nv:100,coins:0,deco:[],pet:''}}
+function load(){try{const j=JSON.parse(localStorage.getItem(KEY));if(!j||typeof j!=='object')return def();const d=def();
+d.name=typeof j.name==='string'?j.name.slice(0,12):'';d.hat=Number.isInteger(j.hat)&&j.hat>=0&&j.hat<HATS.length?j.hat:0;d.lvl=[0,1,2].includes(j.lvl)?j.lvl:1;
+d.done=j.done&&typeof j.done==='object'?j.done:{};d.stars=Number.isInteger(j.stars)?j.stars:0;d.crystal=!!j.crystal;d.mute=!!j.mute;d.seenIntro=!!j.seenIntro;d.items=Array.isArray(j.items)?j.items.filter(x=>typeof x==='string').slice(0,50):[];d.fc=!!j.fc;d.fi=!!j.fi;d.vc=!!j.vc;d.vi=!!j.vi;d.lc=!!j.lc;d.li=!!j.li;d.mc=!!j.mc;d.mi=!!j.mi;d.rc=!!j.rc;d.ri=!!j.ri;d.op=!!j.op;d.nar=j.nar!==false;['mv','sv','nv'].forEach((k,i)=>{d[k]=Number.isFinite(j[k])?Math.max(0,Math.min(100,j[k])):[60,80,100][i]});d.coins=Number.isInteger(j.coins)&&j.coins>=0?j.coins:0;d.deco=Array.isArray(j.deco)?j.deco.filter(x=>typeof x=='string').slice(0,20):[];d.pet=typeof j.pet=='string'?j.pet.slice(0,12):'';return d}catch(e){return def()}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function hasSave(){try{return !!localStorage.getItem(KEY)}catch(e){return false}}
+let AC;function beep(notes){if(S.mute)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();notes.forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);const t=AC.currentTime+i*.12;o.start(t);o.stop(t+.1)})}catch(e){}}
+const GOOD=()=>beep([523,659,784]),BAD=()=>beep([220]),TAP=()=>beep([440]);
+const wiz=(sc)=>{const w=art(WIZ,{H:HATS[S.hat][0],R:HATS[S.hat][1]},sc,'float');return w.outerHTML};
+const html=(h)=>{themeFor(h);PAL.H=HATS[S.hat][0];PAL.R=HATS[S.hat][1];app.innerHTML=h.replace(EMR,(m,e)=>pic(EM[e],e=='🧙'?2:3));window.scrollTo(0,0)};
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function holder(id,el){const h=$('#'+id);if(h)h.appendChild(el)}
+
+function menu(){html(`<h1>MASTER<br>KINGDOM</h1><div class="sub">A MAGICAL JOURNEY AWAITS!</div><div class='row' style='align-items:end'>${pic('isle',5,'float')}<div id="cs"></div>${pic('tree',5,'float')}${pic('wave',5,'float')}</div>
+<button class="btn" onclick="TAP();S.name||S.seenIntro?map():choose(true)">PLAY</button>
+${hasSave()&&S.seenIntro?'<button class="btn alt" onclick="TAP();map()">CONTINUE ADVENTURE</button>':''}
+<button class="btn alt" onclick="TAP();choose(false)">CHOOSE YOUR CHARACTER</button>
+<button class="btn alt" onclick="TAP();settings()">SETTINGS</button>
+<button class="btn alt" onclick="TAP();parent()">PARENT AREA</button><div class="sub">The greatest magic is within you!</div>`);
+holder('cs',art(CASTLE,{},12,'float'));startMusic()}
+
+function choose(first){html(`<h2>Choose your wizard</h2><div id="pv"></div>
+<div class="row">${HATS.map((h,i)=>`<button class="btn sm ${i==S.hat?'sel':''}" style="background:${h[0]};border-color:${h[1]}" onclick="${HNEED[i]&&!S.items.includes(HNEED[i])?'lockedHat('+i+')':'S.hat='+i+';save();choose('+first+')'}">${HNEED[i]&&!S.items.includes(HNEED[i])?'🔒':'&nbsp;'}</button>`).join('')}</div>
+<input id="nm" maxlength="12" placeholder="Name (optional)" value="${S.name}">
+<h2>Learning level</h2>
+${LV.map((l,i)=>`<button class="btn alt ${i==S.lvl?'sel':''}" onclick="S.lvl=${i};S.name=$('#nm').value;save();choose(${first})">${l[0]}<br>Ages ${l[1]}</button>`).join('')}
+<button class="btn" onclick="S.name=$('#nm').value;save();TAP();${first?'intro()':'menu()'}">${first?'START ADVENTURE':'DONE'}</button>`);
+holder('pv',art(WIZ,{H:HATS[S.hat][0],R:HATS[S.hat][1]},10,'float'))}
+
+function say(who,lines,done){let i=0;(function show(){html(`<div id="sp"></div><div class="box" style="min-height:120px"><h2>${who}</h2><p>${lines[i]}</p></div>
+<button class="btn" onclick="TAP();${'x'}()">TAP TO CONTINUE ▶</button>`);window.x=()=>{i++;i<lines.length?show():done()};narr(lines[i],who);
+holder('sp',who=='King Aurelius'?art(KING,{},10,'float'):who=='Mira'?art(MIRA,{},10,'float'):who=='Flame'?art(FLAME,FO,8,'float'):who=='Professor Wizzle'?art(PROF,{},10,'float'):art(WIZ,{H:HATS[S.hat][0],R:HATS[S.hat][1]},10,'float'))})()}
+
+function intro(){const n=S.name||'little wizard';say('Professor Wizzle',[`Welcome, ${n}! I am Professor Wizzle.`,'Oh no! The 5 Magic Crystals have vanished. The castle lights are fading!',`Will you help me find them, ${n}?`,'Let us start in the Enchanted Castle. Follow the map!'],()=>{S.seenIntro=true;save();map()})}
+
+const WORLDS=[['Enchanted Castle','🏰',1],['Whispering Forest','🌲',0],["Wizard's Village",'🏘️',0],['Crystal Lake','🌊',0],['Moonlight Mountain','⛰️',0]];
+function map(){html(`<h2>Kingdom Map</h2><div>${pic('star',3)} ${S.stars} &nbsp; ${pic('gem',3)} ${nc()}/5</div>${S.pet?`<div>${pic(S.pet,5,'float')}</div>`:''}
+${WORLDS.map((w,i)=>`<button class="world ${isOpen(i)?'':'lock'}" style="background:${isOpen(i)?'var(--teal)':'#444'}" onclick="TAP();${isOpen(i)?['castle()','forest()','village()','lake()','mountain()','royal()'][i]:`lumi(${i})`}"><span>${w[1]} ${w[0]}</span><span>${isOpen(i)?(nc1(i)?'💎':'▶'):'🔒'}</span></button>`).join('')}
+<button class="btn" onclick="TAP();treasures()">🎁 TREASURES</button><button class="btn" onclick="TAP();myCastle()">MY CASTLE</button><button class="btn alt" onclick="TAP();menu()">◀ HOME</button>`)}
+function lumi(i){html(`<div class='big float'>${pic('fairy',10)}</div><div class="box"><h2>Lumi</h2><p>${WORLDS[i][0]} is still asleep! ${i==5?'Find all 5 crystals to open the castle gates.':'Finish the world before it to wake it up.'}</p></div><button class="btn" onclick="map()">OK ▶</button>`)}
+
+const PZ=[['colour','🎨 Colour Match'],['shape','🔷 Shape Match'],['count','🔢 Counting Stars']];
+const PZ2=[['missing','🔮 Missing Number'],['pattern','🧩 Pattern Magic'],['add','➕ Magic Maths']];
+const ITEMS={colour:['🎩','Star Hat'],shape:['📜','Spell Scroll'],count:['🪄','Magic Wand'],missing:['🔮','Crystal Ball'],pattern:['🦉','Owl Pet'],add:['🐲','Dragon Sticker'],eggs:['🥚','Golden Egg'],nest:['🪺','Cosy Nest'],memory:['🍄','Magic Mushroom'],maze:['🧭','Compass']};
+const PZ3=[['eggs','🥚 Count the Eggs'],['nest','🪺 Match the Nests'],['memory','🃏 Memory Match'],['maze','🌲 Forest Maze']];
+const FLAME=['..G....G..','..GG..GG..','.GGGGGGGG.','GGWEGGWEGG','GGGGGGGGGG','GGGOOOOGGG','.GGOOOOGG.','.GGOOOOGG.','.GG.GG.GG.','..GG..GG..'];
+const FO={G:'#1fa971',O:'#ff9f1c'};
+let M,Mm;
+Object.assign(PAL,{r:'#e63946',b:'#2f6fed',g:'#1fa971',p:'#7b4dff',o:'#ff9f1c',n:'#8b5a2b',w:'#fff',y:'#ffd23f',k:'#222',c:'#2ec4b6',m:'#ff6b9d'});
+const SP={star:['...yy...','...yy...','yyyyyyyy','.yyyyyy.','..yyyy..','.yyyyyy.','.yy..yy.','yy....yy'],gem:['..cccc..','.cwwccc.','cwcccccc','cccccccc','bbbbbbbb','.bbbbbb.','..bbbb..','...bb...'],chest:['........','.nnnnnn.','nnnnnnnn','nyyyyyyn','nnnyynnn','nnnnnnnn','nnnnnnnn','kkkkkkkk'],chestOpen:['y.y.yy.y','.yyyyyy.','nnnnnnnn','n......n','nyyyyyyn','nnnyynnn','nnnnnnnn','kkkkkkkk'],hat:['....y...','...pp...','..pppp..','..pppp..','.pppppp.','pppppppp','yyyyyyyy','........'],scroll:['.wwwwww.','nwwwwwwn','nwkkkwwn','nwwwwwwn','nwkkkkwn','nwwwwwwn','.wwwwww.','........'],wand:['......y.','....yyy.','...yyy..','..nn....','.nn.....','nn......','........','........'],ball:['..bbbb..','.bwwbbb.','bwbbbbbb','bbbbbbbb','bbbbbbbb','.bbbbbb.','..nnnn..','.nnnnnn.'],owl:['n..nn..n','nnnnnnnn','nwkwwkwn','nwwwwwwn','nnnoonnn','nnnnnnnn','.nnnnnn.','.o....o.'],egg:['..yyyy..','.yyyyyy.','yywyyyyy','yywyyyyy','yyyyyyyy','yyyyyyyy','.yyyyyy.','..yyyy..'],nest:['..wwww..','.wwwwww.','nnnnnnnn','nnnnnnnn','nnnnnnnn','.nnnnnn.','..nnnn..','........'],mush:['..rrrr..','.rrwwrr.','rrrrrrrr','rwwrrwwr','..wwww..','..wwww..','..wwww..','........'],compass:['..kkkk..','.kwwwwk.','kwwrwwwk','kwwrwwwk','kwwbwwwk','kwwbwwwk','.kwwwwk.','..kkkk..'],potion:['..kkkk..','...ww...','...ww...','..wppw..','.wppppw.','wppppppw','wppppppw','.wwwwww.'],lantern:['...kk...','..kkkk..','.kyyyyk.','kyywwyyk','kyyyyyyk','kyyyyyyk','.kkkkkk.','..kkkk..'],key:['..yyyy..','.yy..yy.','.yy..yy.','..yyyy..','...yy...','...yyy..','...yy...','...yyy..'],book:['bbbbbbbb','bwwwwwwb','bwkkkkwb','bwwwwwwb','bwkkkkwb','bwwwwwwb','bbbbbbbb','bbbbbbbb'],back:['pbpbpbpb','bpbpbpbp','pbpbpbpb','bpbpbpbp','pbpbpbpb','bpbpbpbp','pbpbpbpb','bpbpbpbp']};
+Object.assign(SP,{isle:['.gggggg.','gggggggg','nnnnnnnn','.nnnnnn.','..nnnn..','...nn...','........','........'],moon:['..yyy...','.yy.....','yy......','yy......','yy......','yy......','.yy.....','..yyy...'],staff:['.....yy.','....yyyy','.....yy.','....nn..','...nn...','..nn....','.nn.....','nn......'],bell:['...yy...','..yyyy..','.yyyyyy.','.yyyyyy.','yyyyyyyy','yyyyyyyy','........','...yy...'],cloak:['..pppp..','.pppppp.','pppyyppp','pppppppp','pppppppp','ppp..ppp','pp....pp','pp....pp'],crown:['y..yy..y','yy.yy.yy','yyyyyyyy','yyryybyy','yyyyyyyy','yyyyyyyy','........','........'],castle:CASTLE,wiz:WIZ,tree:['...gg...','..gggg..','.gggggg.','gggggggg','..gggg..','.gggggg.','...nn...','...nn...'],house:['...rr...','..rrrr..','.rrrrrr.','rrrrrrrr','.wwwwww.','.wbwwkw.','.wwwwkw.','.wwwwkw.'],wave:['........','..cc....','.cccc.cc','cccccccc','bbbbbbbb','cbbcbbcb','bbbbbbbb','bbbbbbbb'],mount:['...ww...','..wwww..','.pppppp.','.pppppp.','pppppppp','pppppppp','pppppppp','pppppppp'],lock:['..kkkk..','.k....k.','.k....k.','yyyyyyyy','yyykkyyy','yyykkyyy','yyyyyyyy','yyyyyyyy'],check:['........','......gg','.....ggg','g...ggg.','gg.ggg..','.ggggg..','..ggg...','...g....'],fairy:['m.m..m.m','.mmwwmm.','..wwww..','..wSSw..','...ww...','..cwwc..','.cc..cc.','c......c'],paint:['.nnnnnn.','nrrbbggn','nrrbbggn','nyyppmmn','.nnnnnn.','...nn...','...nn...','........'],tri:['...yy...','..yyyy..','..yyyy..','.yyyyyy.','.yyyyyy.','yyyyyyyy','yyyyyyyy','........'],num:['bbbbbbbb','bwwbwwwb','bbwbbwbb','bbwbbwbb','bbwbwwwb','bbbbbbbb','........','........'],puz:['..pp....','.pppp...','pppppppp','pppppppp','ppp.pppp','ppp.pppp','.pppppp.','........'],plus:['...gg...','...gg...','...gg...','gggggggg','gggggggg','...gg...','...gg...','...gg...'],fish:['........','...bbb..','..bbbbb.','bbbbwkbb','bbbbbbbb','..bbbbb.','...bbb..','........'],crab:['r......r','rr....rr','.rrrrrr.','rrwkrwkr','rrrrrrrr','.rrrrrr.','.r.rr.r.','r..rr..r'],shell:['..pppp..','.pmpmpp.','pmpmpmpp','pmpmpmpp','pmpmpmpp','.ppmppp.','..pppp..','...yy...'],octo:['..mmmm..','.mmmmmm.','mmwkmwkm','mmmmmmmm','mmmmmmmm','.m.mm.m.','.m.mm.m.','m..mm..m'],sfish:['...oo...','...oo...','oooooooo','.oooooo.','..oooo..','.oo..oo.','.o....o.','o......o'],turtle:['..gggg..','.gggggg.','gyggygyg','gggggggg','gyggygyg','.gggggg.','g.g..g.g','........']});
+const EM={'🏰':'castle','🌲':'tree','🏘':'house','🌊':'wave','⛰':'mount','🔒':'lock','💎':'gem','✅':'check','🧚':'fairy','🐲':'dragon','🧙':'wiz','🥚':'egg','🎨':'paint','🔷':'tri','🔢':'num','🔮':'ball','🧩':'puz','➕':'plus','🪺':'nest','🃏':'back','⭐':'star','🎁':'chest','🦉':'owl'};
+const EMR=new RegExp('('+Object.keys(EM).join('|')+')\uFE0F?','g');
+function sil(k,sc){const rows=k=='dragon'?FLAME:SP[k],o={};rows.join('').split('').forEach(ch=>{if(ch!='.')o[ch]='#0b0620'});return `<img src='${sprHTML(rows,o,sc).toDataURL()}' style='image-rendering:pixelated'>`}
+function pic(k,sc,cls){const d=k=='dragon',c=sprHTML(d?FLAME:SP[k],d?FO:{},sc);return `<img src='${c.toDataURL()}' style='image-rendering:pixelated' ${cls?`class='${cls}'`:''}>`}
+const IK={colour:'hat',shape:'scroll',count:'wand',missing:'ball',pattern:'owl',add:'dragon',eggs:'egg',nest:'nest',memory:'mush',maze:'compass',vpat:'potion',sort:'lantern',vseq:'key',riddle:'book'};
+function isOpen(i){return i==0||(i==1&&S.crystal)||(i==2&&S.fc)||(i==3&&S.vc)||(i==4&&S.lc)||(i==5&&S.crystal&&S.fc&&S.vc&&S.lc&&S.mc)}
+function nc1(i){return i==0?S.crystal:i==1?S.fc:i==2?S.vc:i==3?S.lc:i==4?S.mc:i==5?S.rc:false}
+function nc(){return (S.crystal?1:0)+(S.fc?1:0)+(S.vc?1:0)+(S.lc?1:0)+(S.mc?1:0)}
+function opts(ans,lo,hi,k){const s=new Set([ans]);while(s.size<k)s.add(Math.max(lo,Math.min(hi,ans+rnd(-3,3))));return shuffle([...s].map(v=>({h:String(v),ok:v==ans})))}
+const GEN2={
+eggs:k=>{const mx=[5,8,10][S.lvl],n=rnd(1,mx);return{p:'How many eggs?',show:pic('egg',5).repeat(n),o:opts(n,1,mx+2,k)}},
+nest:k=>{const c=shuffle(COL).slice(0,k);return{p:'Which nest matches the egg?',show:`<div style='width:60px;height:78px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:${c[0][1]};border:3px solid #fff'></div>`,o:shuffle(c.map((x,i)=>({h:`<div style='width:64px;height:40px;border-radius:0 0 40px 40px;background:${x[1]};border:3px solid #fff'></div>`,ok:!i})))}},
+missing:k=>{const st=S.lvl==2?[2,5,10][rnd(0,2)]:1,a=rnd(1,S.lvl?10:3),q=[0,1,2,3].map(i=>a+i*st),m=rnd(1,3),ans=q[m];q[m]='?';return{p:'Which number is missing?',show:`<span style="font-size:34px">${q.join(' ')}</span>`,o:opts(ans,0,60,k)}},
+pattern:k=>{const s=shuffle(SH),A=s[0],B=s[1],C=s[2],pat=S.lvl==0?[A,B,A,B,A]:S.lvl==1?[A,A,B,A,A]:[A,B,C,A,B],ans=S.lvl==2?C:B,o=[ans,...s.filter(x=>x!=ans)].slice(0,k);return{p:'What comes next?',show:`<span style="font-size:34px">${pat.join(' ')} ?</span>`,o:shuffle(o.map(x=>({h:x,ok:x==ans})))}},
+add:k=>{const mx=[5,10,20][S.lvl],sub=S.lvl==2&&Math.random()<.5;let a=rnd(1,mx-1),b=rnd(1,mx-a);if(sub){a=rnd(2,mx);b=rnd(1,a-1)}const ans=sub?a-b:a+b;return{p:S.lvl==0?'Count them all':'Solve it',show:S.lvl==0?pic('star',4).repeat(a)+' + '+pic('star',4).repeat(b):`${a} ${sub?'−':'+'} ${b}`,o:opts(ans,0,mx,k)}}};
+function castle(){const all=PZ.every(p=>S.done[p[0]]);
+html(`<h2>🏰 Enchanted Castle</h2><div class="big">${S.crystal?pic('gem',8):pic('lantern',8)}${''&&'🕯️'}</div><p>${S.crystal?'The castle glows again!':'Solve all 3 puzzles to find the crystal.'}</p>
+${PZ.map(p=>`<button class="btn" onclick="TAP();play('${p[0]}')">${p[1]} ${S.done[p[0]]?'✅':''}</button>`).join('')}
+<h2>Practice Room</h2>${PZ2.map(p=>`<button class="btn alt" onclick="TAP();play('${p[0]}')">${p[1]} ${S.done[p[0]]?'✅':''}</button>`).join('')}
+${all&&!S.crystal?'<button class="btn" style="background:var(--ok)" onclick="TAP();getCrystal()">💎 TAKE THE CRYSTAL</button>':''}
+<button class="btn alt" onclick="TAP();map()">◀ MAP</button>`)}
+function getCrystal(){S.crystal=true;S.stars+=3;save();GOOD();say('Professor Wizzle',['You found the first Magic Crystal! It shines so bright!'],()=>say('Flame',['Roar! I give you 3 magic stars!','More worlds will wake soon. Well done!'],castle))}
+
+const COL=[['Red','#e63946'],['Blue','#2f6fed'],['Yellow','#ffd23f'],['Green','#1fa971'],['Purple','#7b4dff'],['Orange','#ff9f1c']];
+const SH=['▲','●','■','◆','★','♥'];
+function gen(id){const k=[2,3,4][S.lvl];if(GEN2[id])return GEN2[id](k);
+if(id=='colour'){const c=shuffle(COL).slice(0,k);return{p:'Find the same colour',show:`<div class="sw" style="width:90px;height:90px;background:${c[0][1]}"></div>`,o:shuffle(c.map((x,i)=>({h:`<div class="sw" style="background:${x[1]}"></div>`,ok:!i})))}}
+if(id=='shape'){const s=shuffle(SH).slice(0,k),cs=shuffle(COL);return{p:'Find the same shape',show:`<span style="color:#ccc">${s[0]}</span>`,o:shuffle(s.map((x,i)=>({h:`<span style="color:${cs[i][1]}">${x}</span>`,ok:!i})))}}
+const mx=[5,10,12][S.lvl],n=rnd(1,mx),set=new Set([n]);while(set.size<k)set.add(Math.max(1,Math.min(mx+2,n+rnd(-3,3))));
+return{p:'How many stars?',show:pic('star',5).repeat(n),o:shuffle([...set].map(v=>({h:String(v),ok:v==n})))}}
+let P;
+function play(id){if(id=='memory')return memory();if(id=='maze')return maze();if(id=='lakemem')return memory(1);if(id=='lakemaze')return maze(1);if(id=='mmem')return memory(2);if(id=='jigsaw')return jig();if(id=='hunt')return hunt();if(id=='story')return story();P={id,r:0,w:0,cur:null};round()}
+function round(){P.cur=gen(P.id);P.w=0;const c=P.cur;narr(c.p,'narr');
+html(`<div class="dots">${[0,1,2].map(i=>`<span class="${i<P.r?'on':''}"></span>`).join('')}</div><h2>${c.p}</h2><div class="big">${c.show}</div>
+<div class="grid">${c.o.map((o,i)=>`<button class="opt" id="o${i}" onclick="pick(${i})">${o.h}</button>`).join('')}</div>
+<div id="msg" style="min-height:20px"></div><button class="btn alt sm" onclick="${home(P.id)}()">◀ BACK</button>`)}
+function pick(i){const c=P.cur,b=$('#o'+i);
+if(c.o[i].ok){GOOD();b.classList.add('good');$('#msg').textContent='Great job! ✨';P.r++;setTimeout(()=>{P.r>=3?finish():round()},800)}
+else{BAD();b.classList.remove('bad');void b.offsetWidth;b.classList.add('bad');$('#msg').textContent='Try again!';if(++P.w>=2){const j=c.o.findIndex(o=>o.ok);$('#o'+j).classList.add('hint')}}}
+function finish(){const first=!S.done[P.id];if(first){S.done[P.id]=1;S.stars++;if(!S.items.includes(P.id))S.items.push(P.id)}S.coins=(S.coins||0)+(first?10:2);save();GOOD();
+html(`<div class='big'>${pic('dragon',6,'float')}${pic('star',6)}</div><h2>Puzzle complete!</h2><p>${first?'Flame gives you a magic star!':'Well played, wizard!'}</p>${first?`<button class="btn" style="background:var(--ok)" onclick="chest('${P.id}')">OPEN CHEST</button>`:''}
+<button class="btn" onclick="play('${P.id}')">PLAY AGAIN</button><button class="btn alt" onclick="${home(P.id)}()">BACK</button>`)}
+
+function chest(id){html(`<div class='big opt bad' style='border:0;background:none'>${pic('chest',10)}</div><p>Opening...</p>`);beep([392,523]);setTimeout(()=>{GOOD();html(`<div class='big float'>${pic('chestOpen',6)}${pic(IK[id],8)}</div><h2>You found a ${ITEMS[id][1]}!</h2><button class="btn" onclick="${home(id)}()">COLLECT ▶</button>`)},900)}
+function treasures(){html(`<h2>Treasures</h2><div>${pic('star',3)} ${S.stars} &nbsp; ${pic('gem',3)} ${nc()}/5 &nbsp; ${pic('coin',3)} ${S.coins}</div><div class="grid">${Object.keys(ITEMS).map(k=>{const h=S.items.includes(k);return `<div class="box" style="font-size:9px;${h?'':'opacity:.4'}"><div style="font-size:36px">${h?pic(IK[k],5):pic('back',5)}</div>${h?ITEMS[k][1]:'Not found yet'}</div>`}).join('')}</div>${petRow()}<button class="btn alt" onclick="map()">◀ MAP</button>`)}
+function forest(){M=Mm=null;if(!S.fi){S.fi=true;save();return say('Flame',['Roar! I am Flame the baby dragon! 🐲','I lost my magic eggs in the forest!','Can you help me find them?'],forest)}
+const all=PZ3.every(p=>S.done[p[0]]);
+html(`<h2>🌲 Whispering Forest</h2><div id='fl'></div><div class='big'>${S.fc?pic('gem',8):pic('egg',8)}</div><p>${S.fc?'The forest sings again!':'Solve all 4 puzzles to find the hidden crystal.'}</p>${PZ3.map(p=>`<button class='btn' onclick='TAP();play("${p[0]}")'>${p[1]} ${S.done[p[0]]?'✅':''}</button>`).join('')}${all&&!S.fc?`<button class='btn' style='background:var(--ok)' onclick='getFC()'>💎 TAKE THE CRYSTAL</button>`:''}<button class='btn alt' onclick='TAP();map()'>◀ MAP</button>`);holder('fl',art(FLAME,FO,8,'float'))}
+function getFC(){S.fc=true;S.stars+=3;save();GOOD();say('Flame',['You found the Forest Crystal! Thank you!','Roar! I give you 3 magic stars!','The Wizard Village is awake now. Go!'],forest)}
+function memory(w){const n=[2,3,4][S.lvl]+(w==2?1:0),em=shuffle(w==2?['star','gem','hat','wand','scroll','owl']:w?['fish','crab','shell','octo','sfish','turtle']:['egg','mush','owl','star','gem','hat']).slice(0,n);Mm={cards:shuffle([...em,...em].map(e=>({e,up:false,ok:false}))),sel:[],lock:true,pre:true};P={id:w==2?'mmem':w?'lakemem':'memory'};drawMem();setTimeout(()=>{if(Mm){Mm.lock=false;Mm.pre=false;drawMem()}},[3000,3500,4500][S.lvl])}
+function drawMem(){html(`<h2>${Mm.pre?'Remember the pictures!':'Find the matching pairs'}</h2><div class='grid'>${Mm.cards.map((c,i)=>`<button class='opt ${c.ok?'good':''}' onclick='flip(${i})'>${c.up||c.ok||Mm.pre?pic(c.e,5):pic('back',5)}</button>`).join('')}</div><button class='btn alt sm' onclick='${home(P.id)}()'>◀ BACK</button>`)}
+function flip(i){if(!Mm||Mm.lock)return;const c=Mm.cards[i];if(c.up||c.ok)return;c.up=true;Mm.sel.push(c);TAP();if(Mm.sel.length==2){const[a,b]=Mm.sel;Mm.sel=[];if(a.e==b.e){a.ok=b.ok=true;a.up=b.up=false;GOOD();drawMem();if(Mm.cards.every(x=>x.ok))setTimeout(()=>{if(Mm)finish()},700);return}Mm.lock=true;drawMem();setTimeout(()=>{if(!Mm)return;a.up=b.up=false;Mm.lock=false;drawMem()},900);return}drawMem()}
+function mazeGen(n){const W=2*n+1,g=Array.from({length:W},()=>Array(W).fill(1)),st=[[1,1]];g[1][1]=0;while(st.length){const[x,y]=st[st.length-1],d=shuffle([[2,0],[-2,0],[0,2],[0,-2]]).filter(([a,b])=>x+a>0&&y+b>0&&x+a<W-1&&y+b<W-1&&g[y+b][x+a]===1);if(!d.length){st.pop();continue}const[a,b]=d[0];g[y+b/2][x+a/2]=0;g[y+b][x+a]=0;st.push([x+a,y+b])}return g}
+function maze(w){const n=[3,4,5][S.lvl],W=2*n+1;M={g:mazeGen(n),W,x:1,y:1,gx:W-2,gy:W-2,w};P={id:w?'lakemaze':'maze'};drawMaze()}
+function drawMaze(){const{g,W,x,y,gx,gy}=M;html(`<h2>${M.w?'Help Mira find the pearl!':'Help Flame find the egg!'}</h2><div style='display:grid;grid-template-columns:repeat(${W},1fr);width:100%;max-width:340px;border:4px solid var(--edge)'>${g.map((r,j)=>r.map((c,i)=>`<div style='aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:${Math.floor(220/W)}px;background:${c?(M.w?'#12407a':'#1f6b3a'):(M.w?'#7fd6f0':'#c9f2c7')}'>${i==x&&j==y?'🧙':i==gx&&j==gy?(M.w?'🔮':'🥚'):''}</div>`).join('')).join('')}</div><div class='row'><button class='btn sm' onclick='mv(0,-1)'>▲</button></div><div class='row'><button class='btn sm' onclick='mv(-1,0)'>◀</button><button class='btn sm' onclick='mv(0,1)'>▼</button><button class='btn sm' onclick='mv(1,0)'>▶</button></div><button class='btn alt sm' onclick='forest()'>◀ BACK</button>`)}
+function mv(a,b){if(!M)return;const ok=(x,y)=>M.g[y]&&M.g[y][x]===0,D=[[1,0],[-1,0],[0,1],[0,-1]];if(!ok(M.x+a,M.y+b)){BAD();return}
+do{M.x+=a;M.y+=b}while(ok(M.x+a,M.y+b)&&D.filter(([p,q])=>ok(M.x+p,M.y+q)).length==2&&!(M.x==M.gx&&M.y==M.gy));
+if(M.x==M.gx&&M.y==M.gy){M=null;finish()}else{TAP();drawMaze()}}
+addEventListener('keydown',e=>{const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(d){e.preventDefault();mv(...d)}});
+const PZ4=[['vpat','Rebuild Patterns'],['sort','Sort Ingredients'],['vseq','Number Sequences'],['riddle','Picture Riddles']];
+function home(id){return PZ3.some(p=>p[0]==id)?'forest':PZ4.some(p=>p[0]==id)?'village':PZ5.some(p=>p[0]==id)?'lake':PZ6.some(p=>p[0]==id)?'mountain':id=='final'?'royal':'castle'}
+Object.assign(ITEMS,{vpat:['','Paint Potion'],sort:['','Village Lantern'],vseq:['','Silver Key'],riddle:['','Riddle Book']});
+const CATS=[['Animals',['owl','dragon'],'owl'],['Treasure',['gem','star','egg'],'gem'],['Magic tools',['wand','hat','scroll','ball'],'wand']];
+const RID=[['I light up the night sky.','star'],['I say hoo hoo!','owl'],['Wizards wave me to cast spells.','wand'],['I breathe fire and have wings.','dragon'],['I shine blue in the cave.','gem'],['I keep baby birds warm.','nest']];
+Object.assign(GEN2,{
+vpat:k=>{const c=shuffle(COL),sq=x=>`<div style='width:44px;height:44px;background:${x[1]};border:3px solid #fff'></div>`,A=c[0],B=c[1],C=c[2],pat=S.lvl==2?[A,B,C,A,B]:[A,B,A,B,A],ans=S.lvl==2?C:B,o=[ans,...c.filter(x=>x!=ans)].slice(0,k);return{p:'Which colour comes next?',show:`${pat.map(sq).join('')}<b>?</b>`,o:shuffle(o.map(x=>({h:sq(x),ok:x==ans})))}},
+vseq:k=>{const st=[2,5,10][S.lvl],a=rnd(1,5),q=[0,1,2].map(i=>a+i*st),ans=a+3*st;return{p:'What number comes next?',show:`<span style='font-size:34px'>${q.join(' ')} ?</span>`,o:opts(ans,0,80,k)}},
+sort:k=>{const cs=shuffle(CATS).slice(0,Math.max(2,Math.min(k,3))),t=cs[0],it=t[1][rnd(0,t[1].length-1)];return{p:'Where does it go?',show:pic(it,8),o:shuffle(cs.map((c,i)=>({h:`<div style='font-size:9px'>${pic(c[2],4)}<br>${c[0]}</div>`,ok:!i})))}},
+riddle:k=>{const r=shuffle(RID);return{p:r[0][0],show:'',o:shuffle(r.slice(0,k).map((x,i)=>({h:pic(x[1],6),ok:!i})))}}});
+function village(){M=Mm=null;if(!S.vi){S.vi=true;save();return say('Professor Wizzle',['The village machines have stopped!','Solve the puzzles to power them up.'],village)}
+const all=PZ4.every(p=>S.done[p[0]]);
+html(`<h2>Wizard's Village</h2><div class='big'>${S.vc?pic('gem',8):pic('lantern',8)}</div><p>${S.vc?'The machines hum again!':'Solve all 4 puzzles to restore power.'}</p>${PZ4.map(p=>`<button class='btn' onclick='TAP();play("${p[0]}")'>${p[1]} ${S.done[p[0]]?'✅':''}</button>`).join('')}${all&&!S.vc?`<button class='btn' style='background:var(--ok)' onclick='getVC()'>TAKE THE CRYSTAL</button>`:''}<button class='btn alt' onclick='TAP();map()'>◀ MAP</button>`)}
+function getVC(){S.vc=true;S.stars+=3;save();GOOD();say('Flame',['The village has power again!','Roar! I give you 3 magic stars!','The lake and the mountain will wake soon.'],village)}
+const PZ5=[['shadow','Shadow Match'],['odd','Odd One Out'],['lakemem','Sea Memory'],['lakemaze','Underwater Path']];
+const MIRA=['...oooo...','..oooooo..','.ooSSSSoo.','.oSESSESo.','.ooSSSSoo.','..oSSSSo..','...cccc...','..cccccc..','..cccccc..','...cccc...','..ccccc...','.cc..ccc..'];
+const SEA=['fish','crab','shell','octo','sfish','turtle'];
+Object.assign(ITEMS,{shadow:['','Pearl Shell'],odd:['','Golden Fish'],lakemem:['','Octo Pal'],lakemaze:['','Sea Turtle']});
+Object.assign(IK,{shadow:'shell',odd:'fish',lakemem:'octo',lakemaze:'turtle'});
+Object.assign(GEN2,{
+shadow:k=>{const s=shuffle(SEA).slice(0,k);return{p:'Which one is the shadow?',show:sil(s[0],8),o:shuffle(s.map((x,i)=>({h:pic(x,6),ok:!i})))}},
+odd:k=>{const n=Math.max(3,k),s=shuffle(SEA),a=s[0],b=s[1];return{p:'Which one is different?',show:'',o:shuffle([...Array(n-1).fill(a).map(x=>({h:pic(x,6),ok:false})),{h:pic(b,6),ok:true}])}}});
+function lake(){M=Mm=null;if(!S.li){S.li=true;save();return say('Mira',['Hello! I am Mira the mermaid.','There is a secret door under the lake!','Help me open it!'],lake)}
+const all=PZ5.every(p=>S.done[p[0]]);
+html(`<h2>Crystal Lake</h2><div id='mr'></div><div class='big'>${S.lc?pic('gem',8):pic('lock',8)}</div><p>${S.lc?'The lake sparkles!':'Solve all 4 puzzles to open the crystal door.'}</p>${PZ5.map(p=>`<button class='btn' onclick='TAP();play("${p[0]}")'>${p[1]} ${S.done[p[0]]?'✅':''}</button>`).join('')}${all&&!S.lc?`<button class='btn' style='background:var(--ok)' onclick='getLC()'>OPEN THE DOOR</button>`:''}<button class='btn alt' onclick='TAP();map()'>◀ MAP</button>`);holder('mr',art(MIRA,{},8,'float'))}
+function getLC(){S.lc=true;S.stars+=3;save();GOOD();say('Mira',['The door opens! You found the Ocean Crystal!'],()=>say('Flame',['Roar! I give you 3 magic stars!','Moonlight Mountain is next!'],lake))}
+const PZ6=[['mseq','Moon Numbers'],['mpat','Moon Patterns'],['mmem','Moon Memory'],['mlogic','Wizard Logic']];
+const KING=['..y.yy.y..','..yyyyyy..','..SSSSSS..','..SESSES..','..WWWWWW..','.WWWWWWWW.','.rrrrrrrr.','rrrrrrrrrr','rrrrrrrrrr','..rr..rr..'];
+WORLDS.push(['Royal Castle','🏰',0]);
+Object.assign(ITEMS,{mseq:['','Moon Stone'],mpat:['','Starlight Staff'],mmem:['','Silver Bell'],mlogic:['','Night Cloak'],final:['','Royal Crown']});
+Object.assign(IK,{mseq:'moon',mpat:'staff',mmem:'bell',mlogic:'cloak',final:'crown'});
+Object.assign(GEN2,{
+mseq:k=>{const st=rnd(2,[5,8,12][S.lvl]),a=rnd(1,[6,10,20][S.lvl]),q=[0,1,2,3,4].map(i=>a+i*st),m=rnd(1,3),ans=q[m];q[m]='?';return{p:'Which number is missing?',show:`<span style='font-size:26px'>${q.join(' ')}</span>`,o:opts(ans,0,120,k)}},
+mpat:k=>{const s=shuffle(['star','gem','egg','owl','fish','hat']),[A,B,C]=s,pat=S.lvl==0?[A,B,A,B]:S.lvl==1?[A,B,C,A,B]:[A,A,B,B,C,C,A],ans=S.lvl==1?C:A,o=[ans,...s.filter(x=>x!=ans)].slice(0,k);return{p:'What comes next?',show:pat.map(x=>pic(x,4)).join('')+'<b>?</b>',o:shuffle(o.map(x=>({h:pic(x,5),ok:x==ans})))}},
+mlogic:k=>{const a=rnd(2,[6,10,15][S.lvl]),b=rnd(1,[3,5,8][S.lvl]),c=rnd(1,a+b-1),ans=a+b-c;return{p:'Do the magic maths!',show:`<span style='font-size:30px'>${a} + ${b} − ${c}</span>`,o:opts(ans,0,40,k)}},
+final:k=>{const ids=['missing','pattern','add','riddle','shadow','vseq','sort','nest','eggs','odd'];return GEN2[ids[rnd(0,9)]](k)}});
+function mountain(){M=Mm=null;if(!S.mi){S.mi=true;save();return say('Professor Wizzle',['This is Moonlight Mountain!','Show me your growing magic skills.','Solve all 4 trials to win the Moon Crystal!'],mountain)}
+const all=PZ6.every(p=>S.done[p[0]]);
+html(`<h2>Moonlight Mountain</h2><div class='big'>${S.mc?pic('gem',8):pic('moon',8)}</div><p>${S.mc?'The moon glows bright!':'Solve all 4 trials to win the Moon Crystal.'}</p>${PZ6.map(p=>`<button class='btn' onclick='TAP();play("${p[0]}")'>${p[1]} ${S.done[p[0]]?'✅':''}</button>`).join('')}${all&&!S.mc?`<button class='btn' style='background:var(--ok)' onclick='getMC()'>TAKE THE CRYSTAL</button>`:''}<button class='btn alt' onclick='TAP();map()'>◀ MAP</button>`)}
+function getMC(){S.mc=true;S.stars+=3;save();GOOD();say('Professor Wizzle',['You passed every trial! The Moon Crystal is yours!','You now have all 5 crystals!'],()=>say('Flame',['Roar! I give you 3 magic stars!','Go to the Royal Castle now!'],mountain))}
+function royal(){M=Mm=null;if(!S.ri){S.ri=true;save();return say('King Aurelius',['Welcome to the Royal Castle, brave wizard!','Your 5 crystals can bring back the magic.','First, one last trial!'],royal)}
+html(`<h2>Royal Castle</h2><div class='big'>${S.rc?pic('crown',8):pic('castle',8)}</div><p>${S.rc?'You are the Kingdom Guardian!':S.done.final?'The crystals glow. Restore the kingdom!':'Solve the final trial to use the crystals.'}</p>${S.rc?`<button class='btn' onclick='victory()'>CELEBRATE</button>`:S.done.final?`<button class='btn' style='background:var(--ok)' onclick='getRC()'>RESTORE THE MAGIC</button>`:`<button class='btn' onclick='TAP();play("final")'>FINAL TRIAL</button>`}<button class='btn alt' onclick='TAP();map()'>◀ MAP</button>`)}
+function getRC(){const f=!S.rc;S.rc=true;if(f)S.stars+=5;save();GOOD();say('Professor Wizzle',['Together, the 5 crystals restore the magic!','Look! The kingdom lights up!'],()=>say('King Aurelius',['Thank you, brave wizard!','You are now the Kingdom Guardian!'],()=>say('Flame',['Roar! I give you 5 magic stars!'],victory)))}
+function victory(){beep([523,659,784,1047]);html(`<h1>KINGDOM<br>GUARDIAN</h1><div class='big'>${pic('castle',10,'float')}</div><div class='big'>${pic('crown',8,'float')}${pic('gem',8,'float')}${pic('star',8,'float')}</div><p>The magic is back!${S.name?' Well done, '+S.name+'!':''}</p><button class='btn' onclick='map()'>BACK TO MAP</button><button class='btn alt' onclick='menu()'>HOME</button>`)}
+let MU=null,mo=1;
+function tone(f,d,ty,v){if(S.mute)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}catch(e){}}
+function startMusic(){if(S.mute||MU)return;let i=0;const sc=[523,659,784,988,784,659,587,698],bs=[131,131,175,175,196,196,147,147];MU=setInterval(()=>{tone(sc[i%8],.35,'triangle',.04);if(i%2==0)tone(bs[(i>>1)%8],.5,'sine',.05);i++},260)}
+function stopMusic(){clearInterval(MU);MU=null}
+function narr(t){if(S.nar&&window.speechSynthesis){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=.9;u.pitch=1.15;speechSynthesis.speak(u)}catch(e){}}}
+addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('.btn,.world,.opt');if(!b||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;for(let i=0;i<7;i++){const s=document.createElement('i');s.className='sk';s.style.left=e.clientX+'px';s.style.top=e.clientY+'px';s.style.setProperty('--dx',(Math.random()*60-30)+'px');s.style.setProperty('--dy',(Math.random()*60-30)+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),600)}});
+const WLD=[['#3b2a85','castle','#ffd23f','Enchanted Castle','Royal towers and magical puzzles'],['#0f4d2e','tree','#9dff7a','Whispering Forest','Talking animals and hidden treasures'],['#7a3f1d','house','#ffb347',`Wizard's Village`,'Spells, potions and magical shops'],['#0b3a6b','wave','#7fd6f0','Crystal Lake','Underwater wonders and sparkling gems'],['#1a1a4a','mount','#ffffff','Moonlight Mountain','Snowy peaks and starry skies']];
+const CAPS=[[.5,5.8,'','Beyond the stars, beyond your imagination, lies a kingdom full of wonder...',1],[7,11.8,'',`But one day, the kingdom's magic began to fade...`,1],[12.6,16.6,'Professor Wizzle','Oh, dear! The five magic crystals have disappeared! Without them, our kingdom will lose its magic!',1],[16.8,19.6,'Lumi','Then we need a brave adventurer to help us!',1],[20.2,22.6,'Professor Wizzle','And that adventurer could be YOU!',1],[22.8,24.4,'','Your magical journey begins now!',0],...WLD.map((w,i)=>[24.5+i*1.8,26.3+i*1.8,w[3],w[4],0]),[33.5,34.5,'','The Royal Castle waits... locked until your adventures are done!',0]];
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+function dspr(x,rows,over,px,py,sc){const p={...PAL,...over};rows.forEach((r,j)=>[...r].forEach((ch,i)=>{if(ch!='.'&&p[ch]){x.fillStyle=p[ch];x.fillRect(Math.round(px+i*sc),Math.round(py+j*sc),sc,sc)}}))}
+function glow(x,cx,cy,r,c){const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(cx-r,cy-r,2*r,2*r)}
+function crystal(x,cx,cy,s,col,al){x.globalAlpha=al;x.fillStyle=col;x.beginPath();x.moveTo(cx,cy-s*1.5);x.lineTo(cx+s,cy);x.lineTo(cx,cy+s*1.5);x.lineTo(cx-s,cy);x.closePath();x.fill();x.fillStyle='rgba(255,255,255,.45)';x.beginPath();x.moveTo(cx,cy-s*1.5);x.lineTo(cx-s,cy);x.lineTo(cx,cy);x.closePath();x.fill();x.globalAlpha=1}
+function starsF(x,t,n,sp){for(let i=0;i<n;i++){const ap=i*.05;if(t<ap)continue;const a=(i*2.399)%6.283,r=((i*53%70)+4+t*sp*(1+i%3))%90,px=80+Math.cos(a)*r*1.8,py=45+Math.sin(a)*r;if(px<0||px>159||py<0||py>89)continue;x.fillStyle=['#fff','#ffd23f','#7fd6f0'][i%3];x.globalAlpha=cl(t-ap);x.fillRect(px|0,py|0,i%5?1:2,i%5?1:2)}x.globalAlpha=1}
+function spark(x,t,n,c){x.fillStyle=c;for(let i=0;i<n;i++){const px=(i*47+t*(8+i%5)*mo)%160,py=(i*29+90-(t*(5+i%4)*mo)%90)%90;if(Math.sin(t*6+i)>0){x.fillRect(px|0,py|0,1,1);if(i%4==0){x.fillRect((px-1)|0,py|0,3,1);x.fillRect(px|0,(py-1)|0,1,3)}}}}
+function drawOp(t,x){x.clearRect(0,0,160,90);const RMF=mo<1;
+if(t<6.5){x.fillStyle='#05020f';x.fillRect(0,0,160,90);const nb=cl((t-1)/3);x.globalAlpha=.3*nb;glow(x,45-(t*3*mo)%10,30,45,'#7b2fd1');glow(x,120,60,50,'#2f6fed');glow(x,95,20,35,'#e63a9a');x.globalAlpha=1;starsF(x,t,110,9*mo+1);[[30,60],[120,25],[95,72]].forEach(([a,b],i)=>dspr(x,SP.isle,{},(a-t*(3+i)*mo+160)%160,b+Math.sin(t+i)*3,4));if(t>2.5){const s=2+(t-2.5)*3.4;glow(x,80,45,s*3,'rgba(255,210,63,.45)');crystal(x,80,45,s,'#a855f7',cl(t-2.5));x.fillStyle='#ffd23f';for(let i=0;i<10;i++){const a=t*2+i*.628,r=s*2+4;x.fillRect((80+Math.cos(a)*r*1.5)|0,(45+Math.sin(a)*r*.8)|0,2,2)}}}
+else if(t<12.5){const u=t-6.5,m=1-cl((u-3)/2.5),pan=-u*5*mo;x.fillStyle='#1b2a6b';x.fillRect(0,0,160,90);starsF(x,9,50,.2);dspr(x,SP.mount,{},30+pan*.5,14+Math.sin(u)*2,5);dspr(x,SP.isle,{},120+pan*.4,26+Math.cos(u)*2,5);x.fillStyle='#1f6b3a';x.fillRect(0,62,160,28);x.fillStyle='#2f9de0';x.fillRect(105+pan,66,50,14);for(let i=0;i<7;i++)dspr(x,SP.tree,{},4+i*13+pan*1.2,50,3);x.fillStyle='#6d4bd6';x.fillRect(14+pan,36,8,26);x.fillRect(136+pan,40,8,22);x.fillStyle='#ffd23f';x.fillRect(16+pan,30,4,6);dspr(x,CASTLE,{},45+pan*.8,30,5);crystal(x,80,12,5,'#a855f7',m<1?(Math.random()<.5?m:m*.3):1);x.fillStyle='rgba(20,15,40,'+(.65*(1-m))+')';x.fillRect(0,0,160,90);if(u<.6&&!RMF){x.fillStyle='rgba(255,255,255,'+(1-u/.6)+')';x.fillRect(0,0,160,90)}}
+else if(t<19.8){const u=t-12.5,bob=Math.sin(u*2)*1.5;x.fillStyle='#2a1650';x.fillRect(0,0,160,90);x.fillStyle='#4a2a1a';x.fillRect(0,72,160,18);[0,132].forEach(sx=>{x.fillStyle='#6b3b14';x.fillRect(sx,8,28,64);['#e63946','#2f6fed','#ffd23f','#1fa971'].forEach((c,r)=>{for(let b=0;b<4;b++){x.fillStyle=c;x.fillRect(sx+2+b*6,12+r*15,4,10)}})});dspr(x,SP.potion,{},4,56,2);dspr(x,SP.potion,{},140,56,2);dspr(x,SP.scroll,{},70,6,3);['#e63946','#2f6fed','#ffd23f','#1fa971','#7b4dff'].forEach((c,i)=>{x.fillStyle=c;x.fillRect(38+i*18,22+Math.sin(u*2+i)*3,8,6);x.fillStyle='#fff';x.fillRect(38+i*18,25+Math.sin(u*2+i)*3,8,1)});glow(x,52,66,14,'rgba(255,210,63,.7)');dspr(x,SP.book,{},46,60,2);dspr(x,PROF,{W:'#4b3fd8'},65,22+bob,5);const lx=80+Math.cos(u*3*mo)*45,ly=38+Math.sin(u*3*mo)*14;glow(x,lx+8,ly+8,10,'rgba(255,255,255,.4)');dspr(x,SP.fairy,{},lx,ly,2);spark(x,t,14*(RMF?.3:1),'#ffd23f')}
+else if(t<24.5){const u=t-19.8,R=cl(u/1.2)*34;x.fillStyle='#0a0630';x.fillRect(0,0,160,90);starsF(x,10+u,60,3*mo+.2);for(let i=0;i<3;i++){x.strokeStyle=['#a855f7','#7fd6f0','#ffd23f'][(i+Math.floor(u*4))%3];x.lineWidth=3;x.beginPath();const rr=Math.max(0,R-i*5);x.ellipse(80,45,rr,rr*1.2,0,0,6.3);x.stroke()}const sc=cl((u-.8)/1.5)*6;if(sc>0){dspr(x,WIZ,{H:HATS[S.hat][0],R:HATS[S.hat][1]},80-5*sc,46-6*sc,Math.max(1,Math.round(sc)));if(u>2.5){x.fillStyle='#ffd23f';x.fillRect(80+sc*5|0,(40-sc*4)|0,3,3)}}spark(x,t,(u>2.7?90:25)*(RMF?.3:1),'#fff')}
+else if(t<34.5){const u=t-24.5,i=Math.floor(u/1.8),f=u%1.8;if(i<5){const[bg,k,ac]=WLD[i],rw=SP[k],sc=k=='castle'?6:8;x.fillStyle=bg;x.fillRect(0,0,160,90);starsF(x,8+t,40,5*mo+.2);x.strokeStyle=ac;x.lineWidth=2;x.beginPath();x.ellipse(80,45,10+f*60*mo+10,6+f*40*mo+6,0,0,6.3);x.stroke();dspr(x,rw,{},80-rw[0].length*sc/2,45-rw.length*sc/2+Math.sin(f*3)*2,sc);spark(x,t,30*(RMF?.3:1),ac)}else{x.fillStyle='#120a2a';x.fillRect(0,0,160,90);glow(x,80,48,60,'rgba(255,210,63,.6)');starsF(x,5,40,.5);dspr(x,CASTLE,{},45,28,5);dspr(x,SP.lock,{},72,50,2)}}
+else{const u=t-34.5,cs=['#e63946','#1fa971','#ff9f1c','#2f6fed','#a855f7'];x.fillStyle='#0a0630';x.fillRect(0,0,160,90);starsF(x,20,80,2*mo+.2);if(u>1.5){x.globalAlpha=cl(u-1.5);['#e63946','#ff9f1c','#ffd23f','#1fa971','#2f6fed','#7b4dff'].forEach((c,i)=>{x.strokeStyle=c;x.lineWidth=2;x.beginPath();x.arc(80,72,56-i*3,Math.PI,6.283);x.stroke()});x.globalAlpha=1}const r=cl(1-(u-.8)/1.5)*40;cs.forEach((c,i)=>{const a=u*(2+u)*mo+i*1.2566;crystal(x,80+Math.cos(a)*r*1.6,45+Math.sin(a)*r*.7,4,c,1)});if(u>2.3)glow(x,80,45,32,'rgba(255,255,255,.55)');spark(x,t,40*(RMF?.3:1),'#ffd23f')}}
+function opening(){stopMusic();const old=$('#op');if(old)old.remove();mo=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?.15:1;
+const o=document.createElement('div');o.id='op';o.style.cssText='position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;color:#fff;font-family:inherit';
+o.innerHTML=`<canvas id='oc' width='160' height='90' style='width:min(100vw,calc((100vh - 130px)*16/9));image-rendering:pixelated;background:#000'></canvas><div id='ot' style='min-height:80px;padding:0 12px;max-width:640px;font-size:12px;line-height:1.7'></div><button id='osk' class='btn sm' style='display:none'>SKIP INTRO ▶</button>`;
+document.body.appendChild(o);
+const x=$('#oc').getContext('2d'),ot=$('#ot'),sk=$('#osk');x.imageSmoothingEnabled=false;let raf,ci=-1,lh='',done=false;
+const fin=()=>{if(done)return;done=true;cancelAnimationFrame(raf);try{speechSynthesis.cancel()}catch(e){}o.remove();S.op=true;save();menu()};sk.onclick=fin;
+const go=()=>{try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume()}catch(e){}setTheme('intro');ot.innerHTML=`<div class='sub'>Tap anywhere for sound</div>`;sk.style.display='';const st=performance.now();
+const loop=()=>{const t=(performance.now()-st)/1000;try{drawOp(t,x)}catch(e){}let h='';const k=CAPS.findIndex(a=>t>=a[0]&&t<a[1]);if(t>=36.2)h=`<div style='font-size:22px;color:#ffd23f;text-shadow:3px 3px #7b4dff,0 0 14px #ffd23f'>MASTER KINGDOM</div><div class='sub'>A magical journey awaits!</div>`;else if(k>=0){const a=CAPS[k];h=`${a[2]?`<div style='color:#ffd23f'>${a[2]}</div>`:''}${a[3]}`;if(k!=ci&&a[4])narr(a[3],a[2])}ci=k;if(h!=lh){ot.innerHTML=h;lh=h}if(t>=34.5)sk.style.display='';if(t>=41.5)return fin();raf=requestAnimationFrame(loop)};loop()};
+go()}
+const TH={
+intro:{b:72,r:196,s:[0,3,5,7,10],w:'sine',m:[0,-1,2,-1,4,-1,3,2,1,-1,2,-1,0,-1,-1,-1,5,-1,4,-1,3,-1,2,1,0,-1,1,-1,2,-1,-1,-1],bs:[0,2,3,1]},
+home:{b:112,r:262,s:[0,2,4,7,9],w:'triangle',m:[4,5,6,5,4,2,3,4,5,6,7,6,5,4,2,-1,4,5,6,5,4,2,3,4,2,3,4,2,1,0,0,-1],bs:[0,3,2,3]},
+map:{b:96,r:294,s:[0,2,4,7,9],w:'triangle',m:[2,-1,4,5,4,-1,2,0,1,2,4,2,1,-1,0,-1],bs:[0,2,3,1]},
+castle:{b:92,r:262,s:[0,2,4,5,7,9,11],w:'square',m:[0,2,4,2,0,-1,2,4,5,4,2,-1,4,5,7,5,4,2,0,-1,-1,-1,0,2],bs:[0,3,4,0]},
+forest:{b:84,r:220,s:[0,2,4,7,9],w:'triangle',m:[0,-1,2,4,-1,2,0,-1,1,-1,3,5,-1,3,1,-1],bs:[0,1,2,1]},
+village:{b:124,r:330,s:[0,2,4,7,9],w:'square',m:[4,-1,4,6,5,-1,4,2,3,-1,3,5,4,-1,2,-1],bs:[0,2,3,2]},
+lake:{b:68,r:247,s:[0,2,3,7,9],w:'sine',m:[0,2,4,7,4,2,0,-1,1,3,5,8,5,3,1,-1],bs:[0,1,3,1]},
+mountain:{b:78,r:196,s:[0,3,5,7,10],w:'triangle',m:[0,-1,-1,2,-1,4,-1,-1,5,-1,4,-1,2,-1,-1,0],bs:[0,3,2,3]},
+royal:{b:100,r:262,s:[0,2,4,5,7,9,11],w:'square',m:[0,4,7,4,0,4,7,4,2,5,9,5,2,5,9,5,4,7,11,7,4,7,11,7,7,9,11,14,11,9,7,-1],bs:[0,3,4,0]}};
+let MUT=null,MUN=null,MUS=0,MUNEXT=0,CURT=null,VO=[];
+function acx(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(!AC.mgain){AC.mgain=AC.createGain();AC.mgain.connect(AC.destination);AC.sgain=AC.createGain();AC.sgain.connect(AC.destination)}return AC}
+function applyVol(){if(AC&&AC.mgain){AC.mgain.gain.value=S.mute?0:S.mv/100;AC.sgain.gain.value=S.mute?0:S.sv/100}}
+function setVol(k,v){S[k]=+v;save();applyVol();if(k=='sv')beep([660])}
+function note(f,d,ty,v,dest,when){const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(.0001,when);g.gain.linearRampToValueAtTime(v,when+.02);g.gain.exponentialRampToValueAtTime(.0001,when+d);o.connect(g);g.connect(dest);o.start(when);o.stop(when+d+.05)}
+function beep(notes){try{acx();applyVol();notes.forEach((f,i)=>note(f,.12,'square',.08,AC.sgain,AC.currentTime+i*.12))}catch(e){}}
+function tone(f,d,ty,v){try{acx();note(f,d,ty,v*2,AC.sgain,AC.currentTime)}catch(e){}}
+function fq(T,d){const n=T.s.length;return T.r*Math.pow(2,(T.s[((d%n)+n)%n]+12*Math.floor(d/n))/12)}
+function sched(){const T=TH[MUN];if(!T||!AC)return;const sd=60/T.b/2,v=T.w=='square'?.03:.055;while(MUNEXT<AC.currentTime+.4){const m=T.m[MUS%T.m.length],bi=Math.floor(MUS/8)%T.bs.length;if(m>=0)note(fq(T,m),sd*1.8,T.w,v,AC.mgain,MUNEXT);if(MUS%2==0)note(fq(T,T.bs[bi])/2,sd*3.5,'sine',.06,AC.mgain,MUNEXT);MUNEXT+=sd;MUS++}}
+function setTheme(n){CURT=n;if(MUN==n&&MUT)return;clearInterval(MUT);MUN=n;MUS=0;try{acx();applyVol();MUNEXT=AC.currentTime+.1;MUT=setInterval(sched,120)}catch(e){}}
+function stopMusic(){clearInterval(MUT);MUT=null;MUN=null}
+function startMusic(){setTheme(CURT||'home')}
+function themeFor(h){applyVol();const m=[['id="cs"','home'],['Kingdom Map','map'],['Enchanted Castle','castle'],['Whispering Forest','forest'],["Wizard's Village",'village'],['Crystal Lake','lake'],['Moonlight Mountain','mountain'],['Royal Castle','royal'],['GUARDIAN','royal']].find(a=>h.includes(a[0]));if(m)setTheme(m[1]);else if(!MUT&&CURT)setTheme(CURT)}
+addEventListener('pointerdown',()=>{if(AC&&AC.state=='suspended')AC.resume()});
+function loadVoices(){try{VO=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang))}catch(e){}}
+try{speechSynthesis.onvoiceschanged=loadVoices;loadVoices()}catch(e){}
+const VP={narr:[1.1,.9,0],'Professor Wizzle':[.7,.85,1],Lumi:[1.8,1.05,2],Flame:[1.35,1,3],Mira:[1.5,.92,4],'King Aurelius':[.55,.85,5]};
+function narr(t,who){if(!t||S.nar===false||S.mute||S.nv==0||!window.speechSynthesis)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(t).replace(/<[^>]*>/g,'').replace(/[^\x20-\x7E]/g,''));const p=VP[who]||VP.narr;u.pitch=p[0];u.rate=p[1];u.volume=S.nv/100;if(VO.length){u.voice=VO[p[2]%VO.length];u.lang=u.voice.lang}speechSynthesis.speak(u)}catch(e){}}
+function testVoice(){narr('Hello! I am Professor Wizzle. Let us find the magic crystals!','Professor Wizzle')}
+PZ2.push(['jigsaw','Jigsaw Puzzle'],['hunt','Treasure Hunt'],['story','Story Adventure']);
+Object.assign(SP,{lens:['..kkkk..','.kwwwwk.','kwwwwwwk','kwwwwwwk','.kwwwwk.','..kkkkk.','.....nn.','......nn'],quill:['......ww','.....www','....www.','...www..','..ww....','.nn.....','nn......','n.......'],coin:['..yyyy..','.yywwyy.','yywyyyyy','yywyyyyy','yywyyyyy','yyyyyyyy','.yyyyyy.','..yyyy..']});
+Object.assign(ITEMS,{jigsaw:['','Puzzle Piece'],hunt:['','Magic Lens'],story:['','Story Quill']});
+Object.assign(IK,{jigsaw:'puz',hunt:'lens',story:'quill'});
+const PETS=[['owl','pattern'],['dragon','add'],['octo','lakemem'],['turtle','lakemaze'],['fish','odd']];
+const DEC=[['lantern','sort'],['key','vseq'],['bell','mmem'],['staff','mpat'],['moon','mseq'],['potion','vpat'],['book','riddle'],['crown','final'],['compass','maze'],['wand','count']];
+function lockedHat(i){say('Lumi',['Find the '+ITEMS[HNEED[i]][1]+' to unlock this outfit!'],()=>choose(false))}
+function petRow(){const own=PETS.filter(p=>S.items.includes(p[1]));if(!own.length)return '';return `<h2>Companion</h2><div class='row'><button class='btn sm ${S.pet?'':'sel'}' onclick='setPet("")'>NONE</button>${own.map(p=>`<button class='btn sm ${S.pet==p[0]?'sel':''}' onclick='setPet("${p[0]}")'>${pic(p[0],4)}</button>`).join('')}</div>`}
+function setPet(k){S.pet=k;save();treasures()}
+function myCastle(){html(`<h2>My Castle</h2><div class='big'>${pic('castle',9)}</div><div class='row'>${S.deco.filter(k=>DEC.some(d=>d[0]==k&&S.items.includes(d[1]))).map(k=>pic(k,5,'float')).join('')}</div><h2>Decorations</h2><div class='grid'>${DEC.map(d=>S.items.includes(d[1])?`<button class='opt ${S.deco.includes(d[0])?'good':''}' onclick='togDeco("${d[0]}")'>${pic(d[0],5)}</button>`:`<button class='opt' disabled style='opacity:.4'>${pic('back',5)}</button>`).join('')}</div><p>Tap a decoration to place it in your castle. Win puzzles to find more!</p><button class='btn alt' onclick='TAP();map()'>◀ MAP</button>`)}
+function togDeco(k){S.deco=S.deco.includes(k)?S.deco.filter(x=>x!=k):[...S.deco,k];save();myCastle()}
+let J,H;
+function jig(){const ks=['owl','gem','egg','mush','fish','turtle','crab','shell','hat','potion'],k=ks[rnd(0,ks.length-1)],cols=S.lvl==2?3:2,rows=S.lvl==0?2:3,big=sprHTML(SP[k],{},12),T=[],tw=96/cols,th=96/rows;narr('Build the picture!','narr');for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const t=document.createElement('canvas');t.width=tw;t.height=th;t.getContext('2d').drawImage(big,c*tw,r*th,tw,th,0,0,tw,th);T.push(t.toDataURL())}let o;do{o=shuffle(T.map((_,i)=>i))}while(o.every((v,i)=>v==i));J={cols,rows,T,o,sel:-1,ref:big.toDataURL()};P={id:'jigsaw'};drawJig()}
+function drawJig(){html(`<h2>Build the picture!</h2><img src='${J.ref}' style='image-rendering:pixelated;width:64px'><div style='display:grid;grid-template-columns:repeat(${J.cols},1fr);gap:3px;width:100%;max-width:300px'>${J.o.map((t,i)=>`<img src='${J.T[t]}' onclick='jigTap(${i})' style='image-rendering:pixelated;width:100%;border:3px solid ${i==J.sel?'#ffd23f':'#fff'};background:#000;cursor:pointer'>`).join('')}</div><button class='btn alt sm' onclick='castle()'>◀ BACK</button>`)}
+function jigTap(i){if(J.sel<0){J.sel=i;TAP();drawJig();return}if(J.sel==i){J.sel=-1;drawJig();return}[J.o[J.sel],J.o[i]]=[J.o[i],J.o[J.sel]];J.sel=-1;TAP();drawJig();if(J.o.every((v,k)=>v==k)){GOOD();setTimeout(finish,700)}}
+function hunt(){const n=[3,4,5][S.lvl],keys=shuffle(['gem','star','egg','owl','hat','wand','scroll','ball','key','potion','bell','moon']),T=keys.slice(0,n),D=keys.slice(n,n+6+S.lvl*2),pos=[],place=()=>{for(let g=0;g<200;g++){const x=rnd(6,138),y=rnd(14,70);if(pos.every(p=>Math.abs(p[0]-x)>18||Math.abs(p[1]-y)>18)){pos.push([x,y]);return[x,y]}}const p=[rnd(6,138),rnd(14,70)];pos.push(p);return p};narr('Find the hidden treasures!','narr');H={obj:T.map(k=>{const[x,y]=place();return{k,x,y,f:false}}),dec:D.map(k=>{const[x,y]=place();return{k,x,y}}),tr:Array.from({length:10},()=>[rnd(0,144),rnd(8,66)]),miss:0,hint:false};P={id:'hunt'};drawHunt()}
+function hl(){const e=$('#hl');if(e)e.innerHTML=H.obj.map(o=>`<span style='opacity:${o.f?.35:1}'>${pic(o.k,4)}${o.f?pic('check',3):''}</span>`).join('')}
+function paintHunt(x){x.fillStyle='#7fd6f0';x.fillRect(0,0,160,90);x.fillStyle='#1f6b3a';x.fillRect(0,30,160,60);x.fillStyle='#2a8a4a';for(let i=0;i<6;i++)x.fillRect(i*30,34+i%3*16,22,6);H.tr.forEach(t=>dspr(x,SP.tree,{},t[0],t[1]-6,2));H.dec.forEach(d=>dspr(x,SP[d.k],{},d.x,d.y,2));H.obj.forEach(o=>{dspr(x,SP[o.k],{},o.x,o.y,2);if(o.f){x.strokeStyle='#fff';x.lineWidth=1;x.strokeRect(o.x-1,o.y-1,18,18)}});if(H.hint){const o=H.obj.find(o=>!o.f);if(o){x.strokeStyle='#ffd23f';x.lineWidth=2;x.beginPath();x.arc(o.x+8,o.y+8,14,0,6.3);x.stroke()}}}
+function drawHunt(){html(`<h2>Find the hidden treasures!</h2><div class='row' id='hl'></div><canvas id='hc' width='160' height='90' style='width:100%;max-width:420px;border:4px solid var(--edge);touch-action:manipulation'></canvas><button class='btn alt sm' onclick='castle()'>◀ BACK</button>`);const c=$('#hc'),x=c.getContext('2d');paintHunt(x);hl();c.onpointerdown=e=>{const r=c.getBoundingClientRect(),px=(e.clientX-r.left)*160/r.width,py=(e.clientY-r.top)*90/r.height,o=H.obj.find(o=>!o.f&&px>=o.x-2&&px<=o.x+18&&py>=o.y-2&&py<=o.y+18);if(o){o.f=true;H.miss=0;H.hint=false;GOOD();paintHunt(x);hl();if(H.obj.every(o=>o.f))setTimeout(finish,700)}else{BAD();if(++H.miss>=3){H.hint=true;paintHunt(x)}}}}
+const STORY={s:{t:'Lumi found a glowing path in the Whispering Forest. Which way will you go?',c:[['Follow the river','r'],['Climb the hill','h']]},r:{t:'By the river you meet a shy turtle. Her shell has lost its shine!',c:[['Polish her shell','r1'],['Sing her a song','r2']]},h:{t:'On the hill you find a sleepy owl. A cloud is hiding the moon!',c:[['Wave a wand','h1'],['Ask friends to blow','h2']]},r1:{t:'The shell sparkles! The turtle gives you a shiny pearl.',e:1,p:'shell'},r2:{t:'The turtle smiles and hums along. She shows you a golden coin!',e:1,p:'coin'},h1:{t:'Zap! The cloud floats away. The owl gives you a silver feather.',e:1,p:'quill'},h2:{t:'Whoosh! The wind clears the sky. The owl shares a glowing star.',e:1,p:'star'}};
+function story(){P={id:'story'};node('s')}
+function node(k){const n=STORY[k];narr(n.t,'Lumi');html(`<div class='big float'>${pic('fairy',8)}</div><div class='box' style='min-height:110px'><h2>Lumi</h2><p>${n.t}</p></div>${n.e?`<div class='big'>${pic(n.p,8,'float')}</div><button class='btn' onclick='GOOD();finish()'>CONTINUE ▶</button>`:n.c.map(c=>`<button class='btn' onclick='TAP();node("${c[1]}")'>${c[0]}</button>`).join('')}`)}
+function settings(){html(`<h2>Settings</h2><button class="btn" onclick="S.mute=!S.mute;save();settings()">SOUND: ${S.mute?'OFF':'ON'}</button><button class="btn" onclick="S.nar=!S.nar;save();settings()">NARRATION: ${S.nar?'ON':'OFF'}</button><button class="btn alt" onclick="opening()">REPLAY INTRO</button>
+<div class="box" style="font-size:10px;text-align:left">MUSIC<input type="range" min="0" max="100" value="${S.mv}" oninput="setVol('mv',this.value)" style="width:100%;padding:0;border:0;background:none">EFFECTS<input type="range" min="0" max="100" value="${S.sv}" oninput="setVol('sv',this.value)" style="width:100%;padding:0;border:0;background:none">NARRATOR<input type="range" min="0" max="100" value="${S.nv}" oninput="setVol('nv',this.value)" style="width:100%;padding:0;border:0;background:none"></div><button class="btn alt" onclick="testVoice()">TEST VOICE</button><div class="box" style="font-size:9px">Music is made inside the game. Voices come from your device, so they sound different on each phone.</div><button class="btn alt" onclick="menu()">◀ BACK</button>`)}
+function parent(){const a=rnd(6,9),b=rnd(6,9);html(`<h2>Parent Area</h2><div class="box">Grown-ups only: what is ${a} + ${b}?</div><input id="ans" inputmode="numeric" placeholder="Answer">
+<button class="btn" onclick="+$('#ans').value==${a+b}?pdash():parent()">ENTER</button><button class="btn alt" onclick="menu()">◀ BACK</button>`)}
+function pdash(){const d=Object.keys(S.done).length;html(`<h2>Parent Area</h2><div class="box" style="text-align:left;font-size:10px">Puzzles completed: ${d}/${PZ.length+PZ2.length+PZ3.length+PZ4.length+PZ5.length+PZ6.length+1}<br>Stars: ${S.stars}<br>Crystals: ${nc()}/5<br>Level: ${LV[S.lvl][0]}</div>
+<div class="row">${LV.map((l,i)=>`<button class="btn sm ${i==S.lvl?'sel':''}" onclick="S.lvl=${i};save();pdash()">${l[0]}</button>`).join('')}</div>
+<div class="box" style="font-size:10px;text-align:left">Privacy: progress is saved only in this browser on this device. No accounts, ads or tracking. Clearing browser data erases progress, and it does not move to other devices.</div>
+<button class="btn" style="background:#b02a37" onclick="if(confirm('Reset all progress?')){S=def();save();menu()}">RESET PROGRESS</button><button class="btn alt" onclick="menu()">◀ HOME</button>`)}
+opening();
+</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
+</body></html>
