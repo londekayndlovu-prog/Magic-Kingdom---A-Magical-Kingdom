@@ -1,7 +1,7 @@
 // Master Kingdom service worker: offline play after the first successful load.
 // To release an update, change VERSION. The new worker waits until the game is
 // closed, so a child is never interrupted mid-game.
-const VERSION='mk-v4';
+const VERSION='mk-v5';
 const CORE=['./','index.html','manifest.webmanifest','offline.html','icon-192.png','icon-512.png'];
 const OPTIONAL=['PressStart2P-Regular.ttf'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(VERSION);await c.addAll(CORE);for(const u of OPTIONAL){try{await c.add(u)}catch(_){}}})())});
